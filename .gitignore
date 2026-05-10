@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+*.whl
+
+# 虚拟环境
+venv/
+.venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# 操作系统
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 环境变量
+.env
+.env.local
+
+# 音视频文件（根据需要调整）
+# 如果想把输入视频也纳入版本管理，去掉下面这行
+# *.mp4
+# *.avi
+# *.mov
+# *.mkv
+# *.flv
+
+# 输出音频
+output/
+*.wav
+*.mp3
+*.aac
+*.flac
+*.ogg
+*.m4a
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+tmp/
+
+# 模型文件（如果使用 AI 模型的话）
+*.pth
+*.onnx
+*.pt
+
+# coverage
+.coverage
+htmlcov/
