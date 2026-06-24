@@ -1,0 +1,217 @@
+# ====================================================
+#  LiveScribe 配置文件
+# ====================================================
+#  核心切换点（改完重启 python main.py 即生效）：
+#    1. mode          — 运行模式：分段 / 流式
+#    2. asr.engine    — ASR 引擎选择
+#    3. asr.*.model_* — 模型尺寸 / 路径
+# ====================================================
+
+# ============================================================
+#  运行模式
+# ============================================================
+#  "vad_segmented"  VAD 断句 → 整段转写
+#                   适用引擎: qwen3_transformers / faster_whisper
+#  "streaming"      逐帧增量解码 → 同行刷新
+#                   适用引擎: qwen3_vllm（Windows 不支持 vLLM）
+#                   当前 Windows 上不可用，保留配置字段
+mode: "vad_segmented"
+
+
+# ============================================================
+#  ASR 引擎配置
+# ============================================================
+asr:
+  # -------- 引擎选择 --------
+  # 可选: "qwen3_transformers" | "qwen3_vllm" | "faster_whisper"
+  engine: "faster_whisper"
+
+  # ==========================================================
+  #  Qwen3 Transformers 后端（engine: qwen3_transformers）
+  # ==========================================================
+  qwen3:
+    # --- 模型 ---
+    # 0.6B:  本地 ./models/Qwen3-ASR-0.6B, ~1.8GB 显存, 速度快
+    # 0.6B:  HF "Qwen/Qwen3-ASR-0.6B"
+    # 1.7B:  本地 ./models/Qwen3-ASR-1.7B, ~4GB 显存, 准确率最高
+    # 1.7B:  HF "Qwen/Qwen3-ASR-1.7B"
+    model_name: "./models/Qwen3-ASR-1.7B"
+
+    # --- 设备 ---
+    # "cuda:0"  GPU 第 0 号, "cuda:1" GPU 第 1 号, "cpu" 纯 CPU（慢）
+    device: "cuda"
+
+    # --- 精度（影响显存 & 速度）---
+    # "bfloat16"  推荐, 省显存（RTX 30 系列支持）
+    # "float16"   稍多显存，兼容性更好
+    # "auto"      自动选择
+    dtype: "bfloat16"
+
+  # ==========================================================
+  #  Qwen3 vLLM 后端（engine: qwen3_vllm）
+  #  注意: Windows 上 vLLM 编译失败，暂时不可用
+  #  保留给未来 WSL / Linux 环境使用
+  # ==========================================================
+  qwen3_vllm:
+    # GPU 显存使用占比 (0.0 ~ 1.0), 越小越省显存
+    gpu_memory_utilization: 0.7
+    # 批次大小上限, -1 = 不限, 显存不够时调小
+    max_inference_batch_size: 128
+    # 最大生成 token 数, 长音频需要调大
+    max_new_tokens: 4096
+
+  # ==========================================================
+  #  faster-whisper 后端（engine: faster_whisper）
+  # ==========================================================
+  faster_whisper:
+    # --- 模型大小 ---
+    # "tiny"           75MB,  中文很差, 不推荐
+    # "tiny.en"        75MB,  仅英文
+    # "base"           140MB, 中文差
+    # "base.en"        140MB, 仅英文
+    # "small"          480MB, 中文一般
+    # "small.en"       480MB, 仅英文
+    # "medium"         1.5GB, 中文较好
+    # "medium.en"      1.5GB, 仅英文
+    # "large-v3"       3.0GB, 中文最好, 最慢
+    # "large-v3-turbo" 1.5GB, 中文接近 large-v3, 速度快（推荐）
+    model_size: "large-v3-turbo"
+
+    # --- 设备 ---
+    # "cuda"  GPU, "cpu" 纯 CPU, "auto" 自动选
+    device: "cuda"
+
+    # --- 计算精度 ---
+    # "float16"       GPU 半精度（推荐，有 CUDA 时）
+    # "int8_float16"  混合 int8（CPU 推理时用）
+    # "int8"          纯 int8（CPU 推理, 最省内存）
+    compute_type: "float16"
+
+  # ==========================================================
+  #  通用推理参数（所有引擎共用）
+  # ==========================================================
+  # 语言: null=自动检测, "zh"=中文, "en"=英文
+  language: null
+
+  # 推理批次上限, 显存不够时调小 (8 / 16 / 32)
+  max_inference_batch_size: 24
+
+  # 单次最大输出 token 数, 长句可能需要 >256
+  max_new_tokens: 256
+
+  # ==========================================================
+  #  时间戳（仅 Qwen3 + ForcedAligner 支持）
+  # ==========================================================
+  # 是否返回逐词时间戳
+  return_timestamps: false
+  # ForcedAligner 模型路径, null=不启用
+  # "Qwen/Qwen3-ForcedAligner-0.6B" 或本地路径
+  forced_aligner: null
+
+
+# ============================================================
+#  音频捕获
+# ============================================================
+audio:
+  # 内部统一采样率, ASR 标准 16000, 一般不需要改
+  sample_rate: 16000
+
+  # 声道数, WASAPI loopback 通常是立体声 (2), 内部自动转单声道
+  channels: 1
+
+  # 每帧时长 (ms), 32ms = 512 采样点, VAD 需要 512 点对齐
+  chunk_duration_ms: 32
+
+  # 指定 loopback 设备关键词, null=自动选默认扬声器
+  # 运行 python main.py --list-devices 查看可用设备
+  # 例如: "Senary", "Realtek", "Steam Streaming Speakers"
+  loopback_device: null
+
+  # 重采样算法（仅在设备采样率 ≠ 16000 时生效）
+  # "linear"  线性插值, 快, 音质稍差（推荐, 差异听不出来）
+  # "sinc"    FFT 重采样, 慢, 音质好
+  resample_method: "linear"
+
+
+# ============================================================
+#  VAD 语音活动检测（仅 mode=vad_segmented 时生效）
+# ============================================================
+vad:
+  # 是否启用 VAD, false=盲切模式（有声音就一直录）
+  enabled: true
+
+  # 语音概率阈值 (0.0 ~ 1.0)
+  # 越低越敏感, 背景噪声多时调高; 说话轻时调低
+  # 0.3=较敏感  0.5=适中（默认）  0.7=较严格
+  threshold: 0.5
+
+  # 静音持续多久算断句 (ms)
+  # 200=快速断句  400=适中  800=长停顿才断
+  min_silence_duration_ms: 300
+
+  # 最短有效语音时长 (ms), 短于这个视为噪声
+  # 注意: 当前 Silero VADIterator 不支持此参数, 待后续实现过滤逻辑
+  min_speech_duration_ms: 300
+
+  # 语音段前后填充 (ms), 避免切掉句首/句尾
+  speech_pad_ms: 100
+
+  # 单段最长时长 (秒), 防止 buffer 无限增长
+  # 长段会被强制截断, 说话快/长可以调大
+  # 5=短句快输出  15=默认  30=长篇
+  max_segment_duration_s: 15
+
+  # VAD 模型, 固定使用 silero_vad
+  model: "silero_vad"
+
+  # Silero VAD 模型文件路径（本地 .jit 文件）
+  # 默认 ./models/silero_vad.jit，首次使用需下载
+  # 下载方式: python main.py --download-vad
+  model_path: "./models/silero_vad.jit"
+
+
+# ============================================================
+#  流式模式参数（仅 mode=streaming 时生效）
+#  Windows 上 vLLM 不可用, 此段暂时不生效
+# ============================================================
+streaming:
+  # 增量结果输出间隔 (ms)
+  result_interval_ms: 200
+
+
+# ============================================================
+#  输出
+# ============================================================
+output:
+  # -------- 控制台输出 --------
+  console:
+    # 是否启用
+    enabled: true
+    # 是否显示时间戳前缀 [HH:MM:SS]
+    show_timestamp: true
+    # 输出方式
+    # "overwrite"  流式同行刷新（用 \r 覆盖）, 视觉上像实时
+    # "append"     每次换行, 适合分段模式调试
+    streaming_mode: "overwrite"
+
+  # -------- 文件输出 --------
+  file:
+    # 是否启用
+    enabled: true
+    # 输出目录
+    output_dir: "./output"
+    # 文件名模板, {timestamp} 会被替换为启动时间 YYYYMMDD_HHMMSS
+    filename_pattern: "session_{timestamp}.txt"
+    # 文件刷新间隔 (秒), 平衡磁盘 IO 性能与数据安全
+    flush_interval_s: 5
+
+
+# ============================================================
+#  日志
+# ============================================================
+logging:
+  # 日志级别: "DEBUG" | "INFO" | "WARNING" | "ERROR"
+  # DEBUG 会输出每帧 VAD 概率, 仅调试时用
+  level: "INFO"
+  # 日志文件路径, null=仅控制台
+  file: "logs/livescribe.log"

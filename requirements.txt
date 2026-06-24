@@ -1,0 +1,31 @@
+# LiveScribe core dependencies
+# Install: pip install -r requirements.txt
+
+# ASR engines
+faster-whisper>=1.2.0
+qwen-asr>=0.0.6
+transformers>=4.50.0
+accelerate>=1.0.0
+
+# Audio capture
+SoundCard>=0.4.6
+soundfile>=0.13.0
+librosa>=0.11.0
+soxr>=0.5.0
+
+# VAD
+onnxruntime>=1.20.0
+
+# ML framework
+torch>=2.6.0
+torchaudio>=2.6.0
+numpy>=1.26.0
+scipy>=1.13.0
+
+# Config & utils
+PyYAML>=6.0
+rich>=13.0.0
+tqdm>=4.66.0
+
+# ctranslate2 (faster-whisper backend)
+ctranslate2>=4.5.0
